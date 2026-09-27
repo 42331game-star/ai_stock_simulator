@@ -426,4 +426,4 @@ python db_health_check.py   # 資料庫健康報告
 
 ## 授權條款
 
-上傳前請自行補上你選擇的開源授權（例如 MIT）。
+採用 **MIT** 授權，詳見 [`LICENSE`](LICENSE)。

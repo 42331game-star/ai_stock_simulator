@@ -427,4 +427,4 @@ Always review `git status` before `git add .`.
 
 ## License
 
-Add a license of your choice before publishing.
+MIT — see [`LICENSE`](LICENSE).
