@@ -1,0 +1,2569 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="dashboard-token" content="{{ dashboard_token or '' }}">
+    <title>AI Agentic Society Monitor</title>
+    <style>
+        :root {
+            --bg: #08111f;
+            --bg-2: #0f1d33;
+            --panel: rgba(12, 22, 40, 0.94);
+            --panel-soft: #13253e;
+            --line: #27425f;
+            --text: #e5efff;
+            --muted: #8ea2bf;
+            --accent: #3dd5f3;
+            --accent-2: #5eead4;
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            color: var(--text);
+            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(61, 213, 243, 0.12), transparent 28%),
+                radial-gradient(circle at top right, rgba(94, 234, 212, 0.12), transparent 25%),
+                linear-gradient(180deg, var(--bg-2), var(--bg));
+        }
+        h1 {
+            margin: 0 0 24px;
+            text-align: center;
+            color: var(--accent);
+            letter-spacing: 0.05em;
+        }
+        .view-switch {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 0 22px;
+            flex-wrap: wrap;
+        }
+        .view-btn {
+            background: rgba(19, 37, 62, 0.82);
+            border: 1px solid rgba(61, 213, 243, 0.14);
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+        .view-btn.active {
+            color: var(--text);
+            border-color: rgba(61, 213, 243, 0.45);
+            background: linear-gradient(180deg, rgba(27, 63, 95, 0.9), rgba(19, 37, 62, 0.92));
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        }
+        .page-panel { display: none; }
+        .page-panel.active { display: block; }
+        h2 {
+            margin: 0 0 14px;
+            color: var(--accent);
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 10px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 18px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+            backdrop-filter: blur(6px);
+        }
+        .span-12 { grid-column: span 12; }
+        .span-8 { grid-column: span 8; }
+        .span-6 { grid-column: span 6; }
+        .span-4 { grid-column: span 4; }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        .status-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .summary-item {
+            padding: 16px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(28, 49, 79, 0.95), rgba(12, 22, 40, 0.95));
+            border: 1px solid rgba(61, 213, 243, 0.15);
+        }
+        .summary-item .label {
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+        .summary-item .value {
+            margin-top: 8px;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: #f6fbff;
+        }
+        .summary-item.metric .value {
+            font-size: 1.25rem;
+        }
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(19, 37, 62, 0.9);
+            border: 1px solid rgba(61, 213, 243, 0.15);
+            color: var(--text);
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+        .status-chip.sleeping { border-color: rgba(245, 158, 11, 0.3); color: #fcd34d; }
+        .status-chip.running { border-color: rgba(34, 197, 94, 0.3); color: #86efac; }
+        .status-chip.idle { border-color: rgba(61, 213, 243, 0.3); color: var(--accent); }
+        .status-chip.unknown, .status-chip.stopped { border-color: rgba(239, 68, 68, 0.3); color: #fda4af; }
+        .price-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .price-item {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: var(--panel-soft);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .price-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+        }
+        .symbol { color: var(--muted); font-weight: 700; }
+        .price { color: var(--accent); font-family: Consolas, "Courier New", monospace; font-size: 1.1rem; }
+        .price-grid-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px 14px;
+        }
+        .price-stat {
+            min-width: 0;
+        }
+        .price-stat .stat-label {
+            color: var(--muted);
+            font-size: 0.76rem;
+            margin-bottom: 4px;
+        }
+        .price-stat .stat-value {
+            color: var(--text);
+            font-size: 0.92rem;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .toolbar label {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        select {
+            background: #0d1c32;
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 8px 12px;
+            max-width: 260px;
+        }
+        .chart-wrap {
+            background: linear-gradient(180deg, rgba(8, 17, 31, 0.96), rgba(10, 18, 30, 0.92));
+            border: 1px solid rgba(142, 162, 191, 0.16);
+            border-radius: 18px;
+            padding: 10px;
+            position: relative;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 6px 8px 10px;
+            color: var(--text);
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+        .chart-header .meta {
+            color: var(--muted);
+            font-weight: 500;
+            text-align: right;
+        }
+        canvas {
+            width: 100%;
+            height: 360px;
+            display: block;
+        }
+        .chart-tooltip {
+            position: absolute;
+            pointer-events: none;
+            min-width: 220px;
+            max-width: 280px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(6, 14, 26, 0.96);
+            border: 1px solid rgba(61, 213, 243, 0.28);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+            color: var(--text);
+            font-size: 0.84rem;
+            line-height: 1.45;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 120ms ease, transform 120ms ease;
+            z-index: 5;
+        }
+        .chart-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .chart-tooltip .title {
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .chart-tooltip .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .chart-tooltip .label {
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.93rem;
+        }
+        tbody tr.clickable-row { cursor: pointer; }
+        tbody tr.clickable-row:hover { background: rgba(61, 213, 243, 0.06); }
+        th, td {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+        th { color: var(--muted); font-weight: 500; }
+        th button {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font: inherit;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        th button:hover { color: var(--accent); }
+        .sort-indicator {
+            font-size: 0.78rem;
+            color: var(--accent);
+            min-width: 14px;
+        }
+        .mono { font-family: Consolas, "Courier New", monospace; }
+        .positive { color: var(--green); font-weight: 700; }
+        .negative { color: var(--red); font-weight: 700; }
+        .neutral { color: var(--yellow); font-weight: 700; }
+        .log-container {
+            height: 300px;
+            overflow-y: auto;
+            background: #030915;
+            color: #a4f7ce;
+            font-family: Consolas, "Courier New", monospace;
+            padding: 12px;
+            font-size: 0.84rem;
+            border-radius: 14px;
+            line-height: 1.55;
+            border: 1px solid rgba(142, 162, 191, 0.14);
+        }
+        #error-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: white;
+            padding: 14px 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+        #error-toast.error { background: var(--red); }
+        #error-toast.success { background: #0891b2; }
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: min(420px, 100vw);
+            height: 100vh;
+            background: rgba(7, 15, 27, 0.98);
+            border-left: 1px solid rgba(61, 213, 243, 0.18);
+            box-shadow: -20px 0 40px rgba(0, 0, 0, 0.28);
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 180ms ease;
+            z-index: 20;
+        }
+        .drawer.open { transform: translateX(0); }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .drawer-title {
+            color: var(--accent);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .drawer-close {
+            background: transparent;
+            border: 1px solid var(--line);
+            color: var(--text);
+            border-radius: 10px;
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+        .agent-action-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 8px 0 4px;
+        }
+        .agent-action-btn {
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 9px 14px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .agent-action-btn.disable {
+            background: rgba(245, 158, 11, 0.14);
+            color: #fcd34d;
+            border-color: rgba(245, 158, 11, 0.28);
+        }
+        .agent-action-btn.delete {
+            background: rgba(239, 68, 68, 0.14);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.28);
+        }
+        .agent-action-note {
+            color: var(--muted);
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        .detail-section {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(142, 162, 191, 0.14);
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .detail-card {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(19, 37, 62, 0.78);
+            border: 1px solid rgba(61, 213, 243, 0.1);
+        }
+        .detail-card .label {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+        .detail-card .value {
+            margin-top: 8px;
+            font-size: 1.02rem;
+            font-weight: 700;
+        }
+        .memory-list, .error-list {
+            display: grid;
+            gap: 10px;
+        }
+        .memory-item, .error-item {
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(19, 37, 62, 0.62);
+            border: 1px solid rgba(142, 162, 191, 0.12);
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+        .memory-item .meta, .error-item .meta {
+            color: var(--muted);
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+        .market-bar-group {
+            display: grid;
+            gap: 6px;
+            min-width: 150px;
+        }
+        .market-bar-row {
+            display: grid;
+            grid-template-columns: 42px 1fr 36px;
+            gap: 8px;
+            align-items: center;
+            font-size: 0.78rem;
+        }
+        .market-bar-label { color: var(--muted); }
+        .market-bar-track {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(142, 162, 191, 0.12);
+            overflow: hidden;
+        }
+        .market-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+        }
+        .market-bar-fill.buy { background: linear-gradient(90deg, #0ea5e9, #5eead4); }
+        .market-bar-fill.sell { background: linear-gradient(90deg, #fb7185, #ef4444); }
+        .market-bar-fill.match { background: linear-gradient(90deg, #84cc16, #22c55e); }
+        .tab-strip {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .tab-btn {
+            background: rgba(19, 37, 62, 0.82);
+            border: 1px solid rgba(61, 213, 243, 0.14);
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+        .tab-btn.active {
+            color: var(--text);
+            border-color: rgba(61, 213, 243, 0.4);
+            background: rgba(31, 72, 110, 0.75);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .policy-stack {
+            display: grid;
+            gap: 12px;
+        }
+        .policy-card {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(19, 37, 62, 0.72);
+            border: 1px solid rgba(61, 213, 243, 0.12);
+        }
+        .policy-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .policy-type {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .policy-type.tighten { background: rgba(245, 158, 11, 0.12); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.28); }
+        .policy-type.relief { background: rgba(34, 197, 94, 0.12); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.28); }
+        .policy-type.neutral { background: rgba(142, 162, 191, 0.12); color: var(--muted); border: 1px solid rgba(142, 162, 191, 0.18); }
+        .policy-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .policy-metric {
+            padding: 10px;
+            border-radius: 12px;
+            background: rgba(8, 17, 31, 0.72);
+            border: 1px solid rgba(142, 162, 191, 0.12);
+        }
+        .policy-metric .label {
+            color: var(--muted);
+            font-size: 0.76rem;
+        }
+        .policy-metric .value {
+            margin-top: 6px;
+            font-weight: 700;
+            font-size: 0.98rem;
+        }
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .health-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .health-pill.ok { background: rgba(34, 197, 94, 0.12); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.28); }
+        .health-pill.warn { background: rgba(245, 158, 11, 0.12); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.28); }
+        .health-pill.error { background: rgba(239, 68, 68, 0.12); color: #fda4af; border: 1px solid rgba(239, 68, 68, 0.28); }
+        .audit-stack {
+            display: grid;
+            gap: 12px;
+        }
+        .audit-card {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(19, 37, 62, 0.72);
+            border: 1px solid rgba(61, 213, 243, 0.12);
+        }
+        .audit-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .audit-issue {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(8, 17, 31, 0.72);
+            border: 1px solid rgba(142, 162, 191, 0.12);
+            font-size: 0.84rem;
+        }
+        .posts-shell {
+            max-width: 1320px;
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+        }
+        .posts-hero {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 18px;
+        }
+        .posts-banner {
+            padding: 20px;
+            border-radius: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(94, 234, 212, 0.18), transparent 35%),
+                linear-gradient(180deg, rgba(20, 43, 70, 0.96), rgba(8, 17, 31, 0.96));
+            border: 1px solid rgba(61, 213, 243, 0.18);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+        }
+        .posts-banner-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #f4fbff;
+            margin-bottom: 8px;
+        }
+        .posts-banner-copy {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .posts-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .posts-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.8fr);
+            gap: 18px;
+        }
+        .posts-stream {
+            display: grid;
+            gap: 14px;
+        }
+        .post-card {
+            padding: 16px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(14, 27, 47, 0.98), rgba(8, 17, 31, 0.98));
+            border: 1px solid rgba(61, 213, 243, 0.12);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+        }
+        .post-card.hot {
+            border-color: rgba(245, 158, 11, 0.32);
+            box-shadow: 0 18px 36px rgba(245, 158, 11, 0.08);
+        }
+        .post-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .post-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            flex: 0 0 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #f4fbff;
+            background: linear-gradient(180deg, #1c4f74, #12314a);
+            border: 1px solid rgba(61, 213, 243, 0.18);
+        }
+        .post-main { min-width: 0; flex: 1; }
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .post-author {
+            font-weight: 800;
+            color: #f4fbff;
+        }
+        .post-time {
+            color: var(--muted);
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+        .post-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .post-tag {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 5px 9px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--muted);
+            background: rgba(19, 37, 62, 0.82);
+            border: 1px solid rgba(142, 162, 191, 0.14);
+        }
+        .post-tag.hot {
+            color: #fcd34d;
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.12);
+        }
+        .post-tag.reply {
+            color: #c4b5fd;
+            border-color: rgba(196, 181, 253, 0.22);
+            background: rgba(91, 33, 182, 0.12);
+        }
+        .post-tag.sentiment-bull {
+            color: #86efac;
+            border-color: rgba(34, 197, 94, 0.25);
+            background: rgba(34, 197, 94, 0.12);
+        }
+        .post-tag.sentiment-bear {
+            color: #fda4af;
+            border-color: rgba(239, 68, 68, 0.25);
+            background: rgba(239, 68, 68, 0.12);
+        }
+        .post-content {
+            line-height: 1.68;
+            color: #e8f2ff;
+            font-size: 0.96rem;
+            white-space: pre-wrap;
+        }
+        .posts-side {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+        }
+        .mini-feed {
+            display: grid;
+            gap: 10px;
+        }
+        .mini-item {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(19, 37, 62, 0.72);
+            border: 1px solid rgba(61, 213, 243, 0.1);
+        }
+        .mini-item .meta {
+            color: var(--muted);
+            font-size: 0.78rem;
+            margin-bottom: 4px;
+        }
+        .mini-item .body {
+            line-height: 1.5;
+            font-size: 0.86rem;
+        }
+        .form-shell {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 18px;
+        }
+        .form-card {
+            padding: 18px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(14, 27, 47, 0.98), rgba(8, 17, 31, 0.98));
+            border: 1px solid rgba(61, 213, 243, 0.12);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+        }
+        .form-fields {
+            display: grid;
+            gap: 14px;
+        }
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .field-block label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--muted);
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+        .field-block input,
+        .field-block textarea {
+            width: 100%;
+            background: #0d1c32;
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px 12px;
+            font: inherit;
+        }
+        .field-block textarea {
+            min-height: 150px;
+            resize: vertical;
+            line-height: 1.55;
+        }
+        .stock-bundle-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .stock-bundle-card {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(19, 37, 62, 0.72);
+            border: 1px solid rgba(61, 213, 243, 0.1);
+        }
+        .stock-bundle-card .meta {
+            color: var(--muted);
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+        .primary-btn {
+            background: linear-gradient(180deg, #35d2f0, #1798c9);
+            color: #04111c;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 12px 28px rgba(61, 213, 243, 0.2);
+        }
+        .form-result {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(19, 37, 62, 0.72);
+            border: 1px solid rgba(61, 213, 243, 0.1);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1100px) {
+            .container { grid-template-columns: 1fr; }
+            .span-12, .span-8, .span-6, .span-4 { grid-column: span 1; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .status-grid { grid-template-columns: 1fr; }
+            .price-grid { grid-template-columns: 1fr; }
+            .price-grid-stats { grid-template-columns: 1fr; }
+            .policy-metrics { grid-template-columns: 1fr 1fr; }
+            .health-grid { grid-template-columns: 1fr 1fr; }
+            .posts-hero { grid-template-columns: 1fr; }
+            .posts-layout { grid-template-columns: 1fr; }
+            .posts-metrics { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+            .field-row { grid-template-columns: 1fr; }
+            .stock-bundle-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="error-toast"></div>
+    <h1>AI Agentic Society Real-time Monitor</h1>
+    <div class="view-switch">
+        <button id="view-dashboard" class="view-btn active" type="button">Main Monitor</button>
+        <button id="view-posts" class="view-btn" type="button">Posts Feed</button>
+        <button id="view-create" class="view-btn" type="button">Create Agent</button>
+    </div>
+
+    <section id="page-dashboard" class="page-panel active">
+    <div class="container">
+        <section class="card span-12">
+            <h2>Simulation Status</h2>
+            <div id="status-grid" class="status-grid"></div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Asset Summary</h2>
+            <div id="summary" class="summary-grid"></div>
+        </section>
+
+        <section class="card span-4">
+            <h2>Live Prices</h2>
+            <div id="prices" class="price-grid">Loading...</div>
+        </section>
+
+        <section class="card span-4">
+            <h2>Market Round Stats</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stock</th>
+                        <th>Buy</th>
+                        <th>Sell</th>
+                        <th>Matched</th>
+                        <th>Close</th>
+                    </tr>
+                </thead>
+                <tbody id="market-stats"></tbody>
+            </table>
+        </section>
+
+        <section class="card span-4">
+            <h2>System Warnings</h2>
+            <div id="stderr-tail" class="error-list"></div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Current Health</h2>
+            <div id="health-grid" class="health-grid"></div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Policy History</h2>
+            <div id="policy-history" class="policy-stack"></div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Fundamental Events</h2>
+            <div id="fundamental-events" class="policy-stack"></div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Manual Bulletin Board</h2>
+            <div class="form-grid">
+                <div class="form-card">
+                    <form id="bulletin-form" class="form-fields">
+                        <div class="field-row">
+                            <div class="field-block">
+                                <label for="bulletin-title">Title</label>
+                                <input id="bulletin-title" type="text" placeholder="例如：VDA 傳出新訂單 / 政策傳聞 / 供應鏈異常" required />
+                            </div>
+                            <div class="field-block">
+                                <label for="bulletin-importance">Importance (0-1)</label>
+                                <input id="bulletin-importance" type="number" min="0" max="1" step="0.05" value="0.75" />
+                            </div>
+                        </div>
+                        <div class="field-block">
+                            <label for="bulletin-content">Content</label>
+                            <textarea id="bulletin-content" placeholder="這則公告會直接進入所有 agent 的可見記憶，之後由它們在反思回合自行決定保留或淡忘。"></textarea>
+                        </div>
+                        <button class="primary-btn" type="submit">Post Bulletin To All Agents</button>
+                    </form>
+                </div>
+                <div class="form-card">
+                    <h2>Recent Bulletins</h2>
+                    <div id="bulletin-result" class="form-result">Bulletin result will appear here.</div>
+                    <div id="bulletin-history" class="memory-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Daily Audit</h2>
+            <div id="daily-audits" class="audit-stack"></div>
+        </section>
+
+        <section class="card span-8">
+            <h2>Wealth Leaderboard</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th><button type="button" data-sort-key="id">Agent <span class="sort-indicator" id="sort-id"></span></button></th>
+                        <th>Role</th>
+                        <th><button type="button" data-sort-key="cash">Cash <span class="sort-indicator" id="sort-cash"></span></button></th>
+                        <th><button type="button" data-sort-key="stock_value">Stock Value <span class="sort-indicator" id="sort-stock_value"></span></button></th>
+                        <th><button type="button" data-sort-key="total_assets">Total Assets <span class="sort-indicator" id="sort-total_assets"></span></button></th>
+                        <th>Holdings</th>
+                    </tr>
+                </thead>
+                <tbody id="wealth"></tbody>
+            </table>
+        </section>
+
+        <section class="card span-6">
+            <h2>Agent Asset History</h2>
+            <div class="toolbar">
+                <label for="agent-select">Tracked Agent</label>
+                <select id="agent-select"></select>
+            </div>
+            <div class="chart-wrap">
+                <div class="chart-header">
+                    <div id="asset-chart-title">Agent Asset History</div>
+                    <div id="asset-chart-meta" class="meta"></div>
+                </div>
+                <canvas id="asset-history-chart" width="720" height="360"></canvas>
+            </div>
+        </section>
+
+        <section class="card span-6">
+            <h2>Stock K-Line</h2>
+            <div class="toolbar">
+                <label for="stock-select">Stock</label>
+                <select id="stock-select"></select>
+                <label for="candle-mode">View</label>
+                <select id="candle-mode">
+                    <option value="intraday">Intraday</option>
+                    <option value="daily">Daily</option>
+                </select>
+            </div>
+            <div class="chart-wrap">
+                <div class="chart-header">
+                    <div id="candle-chart-title">Stock K-Line</div>
+                    <div id="candle-chart-meta" class="meta"></div>
+                </div>
+                <canvas id="candle-chart" width="720" height="360"></canvas>
+                <div id="candle-tooltip" class="chart-tooltip"></div>
+            </div>
+        </section>
+
+        <section class="card span-12">
+            <h2>Recent Trade Asset Changes</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tick</th>
+                        <th>Agent</th>
+                        <th>Trade</th>
+                        <th>Price</th>
+                        <th>Cash Before -> After</th>
+                        <th>Total Assets Before -> After</th>
+                        <th>Delta</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-asset-log"></tbody>
+            </table>
+        </section>
+
+        <section class="card span-6">
+            <h2>Submitted Orders</h2>
+            <div id="submitted-orders" class="log-container"></div>
+        </section>
+
+        <section class="card span-6">
+            <h2>Matched Trades</h2>
+            <div id="matched-trades" class="log-container"></div>
+        </section>
+    </div>
+    </section>
+
+    <section id="page-posts" class="page-panel">
+        <div class="posts-shell">
+            <div class="posts-hero">
+                <div class="posts-banner">
+                    <div class="posts-banner-title">Community Feed</div>
+                    <div class="posts-banner-copy">
+                        從主監控切進來後，這裡會把 agent 的論壇內容整理成社群貼文流。你可以在最新與熱門之間切換，
+                        直接看誰在帶風向、誰在追新聞、哪些話題正在升溫。
+                    </div>
+                </div>
+                <div class="posts-metrics">
+                    <div class="summary-item">
+                        <div class="label">Visible Posts</div>
+                        <div id="posts-count" class="value">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Hot Posts</div>
+                        <div id="posts-hot-count" class="value">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Active Agents</div>
+                        <div id="posts-agent-count" class="value">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card span-12">
+                <div class="toolbar">
+                    <label>Sort Feed</label>
+                    <button id="sort-posts-latest" class="tab-btn active" type="button">Latest</button>
+                    <button id="sort-posts-hot" class="tab-btn" type="button">Hottest</button>
+                </div>
+                <div class="posts-layout">
+                    <div id="posts-feed" class="posts-stream"></div>
+                    <div class="posts-side">
+                        <div class="card">
+                            <h2>Trending Posts</h2>
+                            <div id="trending-posts" class="mini-feed"></div>
+                        </div>
+                        <div class="card">
+                            <h2>Newest Voices</h2>
+                            <div id="newest-posts" class="mini-feed"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="page-create" class="page-panel">
+        <div class="form-shell">
+            <div class="posts-banner">
+                <div class="posts-banner-title">Create A New Market Entrant</div>
+                <div class="posts-banner-copy">
+                    快速建立一個新 agent 直接進入現在這個模擬股市。你可以給他自由提示詞、起始現金，
+                    也可以讓他帶著股票部位進場，替市場直接注入更多參與者與流動性。
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-card">
+                    <h2>Create Agent</h2>
+                    <form id="create-agent-form" class="form-fields">
+                        <div class="field-row">
+                            <div class="field-block">
+                                <label for="agent-display-name">Display Name</label>
+                                <input id="agent-display-name" name="display_name" type="text" placeholder="例如：Diamond Panda" required />
+                            </div>
+                            <div class="field-block">
+                                <label for="agent-role-name">Role Label</label>
+                                <input id="agent-role-name" name="role_name" type="text" value="Retail Momentum" />
+                            </div>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-block">
+                                <label for="agent-starting-cash">Starting Cash</label>
+                                <input id="agent-starting-cash" name="starting_cash" type="number" min="0" step="100" value="10000" />
+                            </div>
+                            <div class="field-block">
+                                <label for="agent-salary">Salary</label>
+                                <input id="agent-salary" name="salary" type="number" min="0" step="50" value="500" />
+                            </div>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-block">
+                                <label for="agent-cost-multiplier">Cost Multiplier</label>
+                                <input id="agent-cost-multiplier" name="cost_multiplier" type="number" min="0.1" step="0.1" value="1.0" />
+                            </div>
+                            <div class="field-block">
+                                <label for="agent-prompt-preset">Prompt Preset</label>
+                                <select id="agent-prompt-preset">
+                                    <option value="">Custom</option>
+                                    <option value="Aggressive hype chaser. Loves concentrated bets and reacts fast to social momentum.">Aggressive Hype Chaser</option>
+                                    <option value="Calm contrarian. Watches crowd sentiment and prefers fading euphoric moves.">Calm Contrarian</option>
+                                    <option value="News-obsessed trader. Reprices everything immediately after new narratives appear.">News-Obsessed Trader</option>
+                                    <option value="Risk-managed allocator. Prefers diversified positions and protects downside first.">Risk-Managed Allocator</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="field-block">
+                            <label for="agent-base-prompt">Free Prompt / Traits</label>
+                            <textarea id="agent-base-prompt" name="base_prompt" placeholder="自由寫這個 agent 的投資風格、社交風格、情緒傾向、價值觀、弱點與習慣。"></textarea>
+                        </div>
+
+                        <button class="primary-btn" type="submit">Create Agent And Inject Into Market</button>
+                    </form>
+                </div>
+
+                <div class="form-card">
+                    <h2>Starting Stock Bundle</h2>
+                    <div class="stock-bundle-grid">
+                        <div class="stock-bundle-card">
+                            <div class="meta">ITE <span id="bundle-price-ITE"></span></div>
+                            <div class="field-block">
+                                <label for="bundle-ITE">Shares</label>
+                                <input id="bundle-ITE" type="number" min="0" step="1" value="0" />
+                            </div>
+                        </div>
+                        <div class="stock-bundle-card">
+                            <div class="meta">SLA <span id="bundle-price-SLA"></span></div>
+                            <div class="field-block">
+                                <label for="bundle-SLA">Shares</label>
+                                <input id="bundle-SLA" type="number" min="0" step="1" value="0" />
+                            </div>
+                        </div>
+                        <div class="stock-bundle-card">
+                            <div class="meta">SMC <span id="bundle-price-SMC"></span></div>
+                            <div class="field-block">
+                                <label for="bundle-SMC">Shares</label>
+                                <input id="bundle-SMC" type="number" min="0" step="1" value="0" />
+                            </div>
+                        </div>
+                        <div class="stock-bundle-card">
+                            <div class="meta">VDA <span id="bundle-price-VDA"></span></div>
+                            <div class="field-block">
+                                <label for="bundle-VDA">Shares</label>
+                                <input id="bundle-VDA" type="number" min="0" step="1" value="0" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>What Happens On Create</h3>
+                        <div class="memory-list">
+                            <div class="memory-item">Agent config 會寫進 `agents/`，之後可持續續跑。</div>
+                            <div class="memory-item">角色會立刻寫進 DB，排行榜與資產面板能馬上看到。</div>
+                            <div class="memory-item">如果你帶股票進場，會直接作為起始持倉，讓市場多一點流動性。</div>
+                        </div>
+                    </div>
+                    <div id="create-agent-result" class="form-result">Create result will appear here.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <aside id="agent-drawer" class="drawer">
+        <div class="drawer-header">
+            <div class="drawer-title" id="drawer-title">Agent Detail</div>
+            <button id="drawer-close" class="drawer-close" type="button">Close</button>
+        </div>
+        <div id="drawer-body"></div>
+    </aside>
+
+    <script>
+        let latestData = null;
+        let candleHoverState = null;
+        const viewState = {
+            pageTab: 'dashboard',
+            selectedAgent: '',
+            selectedStock: '',
+            candleMode: 'intraday',
+            leaderboardSort: { key: 'total_assets', direction: 'desc' },
+            drawerAgentId: '',
+            drawerTab: 'overview',
+            postsSort: 'latest'
+        };
+
+        function showToast(msg, variant = 'error') {
+            const toast = document.getElementById('error-toast');
+            toast.className = variant;
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 5000);
+        }
+
+        function showError(msg) {
+            showToast(`Error: ${msg}`, 'error');
+        }
+
+        function showSuccess(msg) {
+            showToast(msg, 'success');
+        }
+
+        // Escape untrusted server/LLM text before inserting it as HTML.
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Read a JSON body safely: servers may return an HTML error page.
+        async function readJsonBody(response) {
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+            if (contentType.includes('application/json')) {
+                try {
+                    return await response.json();
+                } catch (err) {
+                    return {};
+                }
+            }
+            return {};
+        }
+
+        const DASHBOARD_TOKEN = (document.querySelector('meta[name="dashboard-token"]') || {}).content || '';
+
+        function writeHeaders(extra = {}) {
+            const headers = Object.assign({}, extra);
+            // Required by the backend to reject cross-site form posts (CSRF).
+            headers['X-Requested-With'] = 'XMLHttpRequest';
+            if (DASHBOARD_TOKEN) headers['X-Dashboard-Token'] = DASHBOARD_TOKEN;
+            return headers;
+        }
+
+        function formatMoney(value) {
+            return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        function renderSummary(wealth) {
+            const summary = document.getElementById('summary');
+            if (!wealth.length) {
+                summary.innerHTML = '<div class="summary-item"><div class="label">Status</div><div class="value">No data</div></div>';
+                return;
+            }
+
+            const topAgent = wealth.reduce((best, agent) => agent.total_assets > best.total_assets ? agent : best, wealth[0]);
+            const totalCash = wealth.reduce((sum, agent) => sum + agent.cash, 0);
+            const totalStockValue = wealth.reduce((sum, agent) => sum + agent.stock_value, 0);
+            const totalAssets = wealth.reduce((sum, agent) => sum + agent.total_assets, 0);
+
+            summary.innerHTML = `
+                <div class="summary-item">
+                    <div class="label">Top Agent</div>
+                    <div class="value">${escapeHtml(topAgent.id)}</div>
+                    <div>${formatMoney(topAgent.total_assets)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Total Cash</div>
+                    <div class="value">${formatMoney(totalCash)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Total Equity Value</div>
+                    <div class="value">${formatMoney(totalStockValue)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Tracked Total Assets</div>
+                    <div class="value">${formatMoney(totalAssets)}</div>
+                </div>
+            `;
+        }
+
+        function renderStatus(status) {
+            const grid = document.getElementById('status-grid');
+            const safeStatus = status || {};
+            const statusClass = safeStatus.status || 'unknown';
+            const metrics = safeStatus.round_metrics || {};
+            grid.innerHTML = `
+                <div class="status-grid">
+                    <div class="summary-item">
+                        <div class="label">Lifecycle</div>
+                        <div class="value"><span class="status-chip ${escapeHtml(statusClass)}">${escapeHtml(safeStatus.status || 'unknown')}</span></div>
+                        <div>${escapeHtml(safeStatus.message || 'No message')}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Phase</div>
+                        <div class="value">${escapeHtml(safeStatus.phase || 'UNKNOWN')}</div>
+                        <div>${escapeHtml(safeStatus.virtual_time || 'Unavailable')}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Day</div>
+                        <div class="value">${safeStatus.day ?? '-'}</div>
+                        <div>Tick ${safeStatus.tick ?? '-'} / Day Tick ${safeStatus.day_tick ?? '-'}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Round Type</div>
+                        <div class="value">${escapeHtml(safeStatus.round_type || 'n/a')}</div>
+                        <div>${safeStatus.sleep_duration ? `Sleep ${safeStatus.sleep_duration}s` : 'Active cycle'}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Updated</div>
+                        <div class="value">${safeStatus.updated_at ? safeStatus.updated_at.slice(11, 19) : '--:--:--'}</div>
+                        <div>${safeStatus.updated_at ? safeStatus.updated_at.slice(0, 10) : ''}</div>
+                    </div>
+                </div>
+                <div class="status-metrics-grid">
+                    <div class="summary-item metric">
+                        <div class="label">Successful Responses</div>
+                        <div class="value">${metrics.successful_responses ?? 0}</div>
+                        <div>Total jobs ${metrics.total_jobs ?? 0}</div>
+                    </div>
+                    <div class="summary-item metric">
+                        <div class="label">Fallback Count</div>
+                        <div class="value">${metrics.fallback_count ?? 0}</div>
+                        <div>Model or parse fallback</div>
+                    </div>
+                    <div class="summary-item metric">
+                        <div class="label">Valid Orders</div>
+                        <div class="value">${metrics.valid_orders ?? 0}</div>
+                        <div>After trade guard</div>
+                    </div>
+                    <div class="summary-item metric">
+                        <div class="label">Matched Trades</div>
+                        <div class="value">${metrics.matched_trades ?? 0}</div>
+                        <div>Settlements in round</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPrices(stockCatalog) {
+            const priceDiv = document.getElementById('prices');
+            const entries = Object.entries(stockCatalog || {});
+            priceDiv.innerHTML = entries.length
+                ? entries.map(([symbol, stock]) => {
+                    const price = Number(stock.price || 0);
+                    const fairValue = Number(stock.fair_value || 0);
+                    const dividend = Number(stock.dividend_per_share || 0);
+                    const liquidationValue = Number(stock.liquidation_value || 0);
+                    const forwardEps = Number(stock.forward_eps || 0);
+                    const targetPe = Number(stock.target_pe || 0);
+                    const growthRate = Number(stock.growth_rate || 0) * 100;
+                    const valueGap = fairValue > 0 ? ((price / fairValue) - 1) * 100 : 0;
+                    const dividendYield = price > 0 ? (dividend / price) * 100 : 0;
+                    return `
+                        <div class="price-item">
+                            <div class="price-top">
+                                <span class="symbol">${escapeHtml(symbol)}</span>
+                                <span class="price">$${price.toFixed(2)}</span>
+                            </div>
+                            <div class="price-grid-stats">
+                                <div class="price-stat">
+                                    <div class="stat-label">Fair Value</div>
+                                    <div class="stat-value">${formatMoney(fairValue)}</div>
+                                </div>
+                                <div class="price-stat">
+                                    <div class="stat-label">Value Gap</div>
+                                    <div class="stat-value">${valueGap >= 0 ? '+' : ''}${valueGap.toFixed(1)}%</div>
+                                </div>
+                                <div class="price-stat">
+                                    <div class="stat-label">Forward EPS / PE</div>
+                                    <div class="stat-value">${forwardEps.toFixed(2)} / ${targetPe.toFixed(1)}</div>
+                                </div>
+                                <div class="price-stat">
+                                    <div class="stat-label">Growth / Regime</div>
+                                    <div class="stat-value">${growthRate.toFixed(1)}% / ${escapeHtml(stock.growth_regime || 'Stable')}</div>
+                                </div>
+                                <div class="price-stat">
+                                    <div class="stat-label">Dividend</div>
+                                    <div class="stat-value">${dividend.toFixed(2)} (${dividendYield.toFixed(2)}%)</div>
+                                </div>
+                                <div class="price-stat">
+                                    <div class="stat-label">Liquidation Value</div>
+                                    <div class="stat-value">${formatMoney(liquidationValue)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : 'No price data available.';
+        }
+
+        function buildMarketBar(label, value, maxValue, variant) {
+            const width = maxValue > 0 ? Math.max(4, (Number(value) / maxValue) * 100) : 0;
+            return `
+                <div class="market-bar-row">
+                    <div class="market-bar-label">${label}</div>
+                    <div class="market-bar-track"><div class="market-bar-fill ${variant}" style="width:${width}%"></div></div>
+                    <div class="mono">${Number(value).toLocaleString()}</div>
+                </div>
+            `;
+        }
+
+        function renderMarketStats(rows) {
+            const tbody = document.getElementById('market-stats');
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No market stats yet.</td></tr>';
+                return;
+            }
+            const latestBySymbol = new Map();
+            rows.forEach(row => latestBySymbol.set(row.symbol, row));
+            const latestRows = [...latestBySymbol.values()].slice(-6).reverse();
+            const maxVolume = latestRows.reduce((max, row) => Math.max(max, Number(row.buy_volume), Number(row.sell_volume), Number(row.matched_volume)), 0);
+            tbody.innerHTML = latestRows.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.symbol)}</td>
+                    <td colspan="3">
+                        <div class="market-bar-group">
+                            ${buildMarketBar('Buy', row.buy_volume, maxVolume, 'buy')}
+                            ${buildMarketBar('Sell', row.sell_volume, maxVolume, 'sell')}
+                            ${buildMarketBar('Match', row.matched_volume, maxVolume, 'match')}
+                        </div>
+                    </td>
+                    <td class="mono">${formatMoney(row.close_price)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderErrors(lines) {
+            const box = document.getElementById('stderr-tail');
+            const filtered = (lines || []).filter(line => line && line.trim());
+            if (!filtered.length) {
+                box.innerHTML = '<div class="error-item">No recent warnings.</div>';
+                return;
+            }
+            box.innerHTML = filtered.slice(-8).reverse().map(line => `
+                <div class="error-item">
+                    <div class="meta">stderr</div>
+                    <div>${escapeHtml(line)}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderHealthReport(report) {
+            const grid = document.getElementById('health-grid');
+            const health = report || {};
+            const status = health.status || 'unknown';
+            const pillClass = status === 'ok' ? 'ok' : status === 'warn' ? 'warn' : 'error';
+            grid.innerHTML = `
+                <div class="summary-item">
+                    <div class="label">Health Status</div>
+                    <div class="value"><span class="health-pill ${pillClass}">${escapeHtml(status)}</span></div>
+                    <div>${(health.issues || []).length} issue(s)</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Negative Cash</div>
+                    <div class="value">${health.negative_cash_agents ?? 0}</div>
+                    <div>agents below zero</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Negative Holdings</div>
+                    <div class="value">${health.negative_holding_entries ?? 0}</div>
+                    <div>invalid position entries</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">Asset Formula Errors</div>
+                    <div class="value">${health.asset_formula_errors ?? 0}</div>
+                    <div>cash + stock_value mismatch</div>
+                </div>
+            `;
+        }
+
+        function formatPercent(value) {
+            return `${(Number(value) * 100).toFixed(2)}%`;
+        }
+
+        function renderPolicyHistory(rows) {
+            const box = document.getElementById('policy-history');
+            if (!rows.length) {
+                box.innerHTML = '<div class="policy-card">No policy actions yet.</div>';
+                return;
+            }
+
+            box.innerHTML = rows.slice().reverse().map(row => {
+                const metrics = row.metrics || {};
+                const actions = row.actions || {};
+                const taxedAgents = actions.taxed_agents || [];
+                const taxedText = taxedAgents.length
+                    ? taxedAgents.map(item => `${escapeHtml(item.agent_id)}: ${formatMoney(item.tax_paid)}`).join(' | ')
+                    : 'No direct wealth tax';
+                return `
+                    <div class="policy-card">
+                        <div class="policy-card-head">
+                            <div>
+                                <div class="policy-type ${escapeHtml(row.policy_type || 'neutral')}">${escapeHtml(row.policy_type || 'neutral')}</div>
+                                <div style="margin-top:8px;font-weight:700">${escapeHtml(row.title || 'Policy Event')}</div>
+                                <div class="meta">Day ${escapeHtml(row.day)} | Tick ${escapeHtml(row.tick)} | Day Tick ${escapeHtml(row.day_tick)}</div>
+                            </div>
+                            <div class="mono">${row.timestamp ? row.timestamp.replace('T', ' ').slice(0, 19) : ''}</div>
+                        </div>
+                        <div>${escapeHtml(row.summary || 'No summary')}</div>
+                        <div class="policy-metrics">
+                            <div class="policy-metric">
+                                <div class="label">Avg Return</div>
+                                <div class="value">${formatPercent(metrics.avg_market_return || 0)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Top Stock Concentration</div>
+                                <div class="value">${formatPercent(metrics.top_stock_concentration || 0)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Poverty Rate</div>
+                                <div class="value">${formatPercent(metrics.poverty_rate || 0)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Cash Stress</div>
+                                <div class="value">${formatPercent(metrics.cash_stress_rate || 0)}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px">
+                            <strong>Living Cost:</strong>
+                            ${formatMoney(actions.living_cost_before || 0)} -> ${formatMoney(actions.living_cost_after || 0)}
+                        </div>
+                        <div style="margin-top:6px">
+                            <strong>Total Tax Collected:</strong> ${formatMoney(actions.total_tax_collected || 0)}
+                        </div>
+                        <div style="margin-top:6px">
+                            <strong>Taxed Agents:</strong> ${taxedText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderFundamentalEvents(rows) {
+            const box = document.getElementById('fundamental-events');
+            if (!rows.length) {
+                box.innerHTML = '<div class="policy-card">No fundamental events yet.</div>';
+                return;
+            }
+            box.innerHTML = rows.slice().reverse().map(row => {
+                const details = row.details || {};
+                const impact = Number(row.impact_score || 0);
+                const impactClass = impact >= 0.15 ? 'tighten' : impact <= -0.15 ? 'relief' : 'neutral';
+                return `
+                    <div class="policy-card">
+                        <div class="policy-card-head">
+                            <div>
+                                <div class="policy-type ${impactClass}">${escapeHtml(row.symbol || 'N/A')} | ${escapeHtml(row.event_type || 'event')}</div>
+                                <div style="margin-top:8px;font-weight:700">${escapeHtml(row.event_title || 'Fundamental Event')}</div>
+                                <div class="meta">Day ${escapeHtml(row.day)} | Tick ${escapeHtml(row.tick)} | Day Tick ${escapeHtml(row.day_tick)}</div>
+                            </div>
+                            <div class="mono">Impact ${impact >= 0 ? '+' : ''}${impact.toFixed(2)}</div>
+                        </div>
+                        <div>${escapeHtml(row.summary || 'No summary')}</div>
+                        <div class="policy-metrics">
+                            <div class="policy-metric">
+                                <div class="label">Forward EPS</div>
+                                <div class="value">${Number(details.old_forward_eps || 0).toFixed(2)} -> ${Number(details.new_forward_eps || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Fair Value</div>
+                                <div class="value">${formatMoney(details.old_fair_value || 0)} -> ${formatMoney(details.new_fair_value || 0)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Dividend</div>
+                                <div class="value">${Number(details.old_dividend || 0).toFixed(2)} -> ${Number(details.new_dividend || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Growth</div>
+                                <div class="value">${formatPercent(details.old_growth_rate || 0)} -> ${formatPercent(details.new_growth_rate || 0)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDailyAudits(rows) {
+            const box = document.getElementById('daily-audits');
+            if (!rows.length) {
+                box.innerHTML = '<div class="audit-card">No daily audits yet.</div>';
+                return;
+            }
+            box.innerHTML = rows.slice().reverse().map(row => {
+                const stats = row.stats || {};
+                const issues = row.issues || [];
+                const pillClass = row.health_status === 'ok' ? 'ok' : row.health_status === 'warn' ? 'warn' : 'error';
+                return `
+                    <div class="audit-card">
+                        <div class="audit-card-head">
+                            <div>
+                                <span class="health-pill ${pillClass}">${escapeHtml(row.health_status || 'unknown')}</span>
+                                <div style="margin-top:8px;font-weight:700">Day ${escapeHtml(row.day)} | Tick ${escapeHtml(row.tick)}</div>
+                                <div class="meta">${escapeHtml(row.summary || 'No summary')}</div>
+                            </div>
+                            <div class="mono">${row.timestamp ? row.timestamp.replace('T', ' ').slice(0, 19) : ''}</div>
+                        </div>
+                        <div class="policy-metrics">
+                            <div class="policy-metric">
+                                <div class="label">Policy</div>
+                                <div class="value">${escapeHtml(stats.policy_type || 'n/a')}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Living Cost</div>
+                                <div class="value">${formatMoney(stats.living_cost_before || 0)} -> ${formatMoney(stats.living_cost_after || 0)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Tax Collected</div>
+                                <div class="value">${formatMoney(stats.total_tax_collected || 0)}</div>
+                            </div>
+                            <div class="policy-metric">
+                                <div class="label">Total Assets</div>
+                                <div class="value">${formatMoney(stats.total_assets || 0)}</div>
+                            </div>
+                        </div>
+                        ${issues.length
+                            ? issues.slice(0, 5).map(issue => `<div class="audit-issue"><strong>${escapeHtml(issue.type)}</strong>: ${escapeHtml(issue.message)}</div>`).join('')
+                            : '<div class="audit-issue">No issues recorded.</div>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatTimestamp(value) {
+            if (!value) return '';
+            return escapeHtml(String(value).replace('T', ' ').slice(0, 19));
+        }
+
+        function sentimentTag(sentiment) {
+            const value = Number(sentiment || 0);
+            if (value >= 0.35) return '<span class="post-tag sentiment-bull">Bullish</span>';
+            if (value <= -0.35) return '<span class="post-tag sentiment-bear">Bearish</span>';
+            return '<span class="post-tag">Neutral</span>';
+        }
+
+        function getSortedForumPosts(posts) {
+            const list = [...(posts || [])];
+            if (viewState.postsSort === 'hot') {
+                list.sort((a, b) => {
+                    if (Number(b.is_hot) !== Number(a.is_hot)) return Number(b.is_hot) - Number(a.is_hot);
+                    return Number(b.post_id) - Number(a.post_id);
+                });
+                return list;
+            }
+            list.sort((a, b) => Number(b.post_id) - Number(a.post_id));
+            return list;
+        }
+
+        function renderPostsPage(posts) {
+            const feed = document.getElementById('posts-feed');
+            const trending = document.getElementById('trending-posts');
+            const newest = document.getElementById('newest-posts');
+            const sorted = getSortedForumPosts(posts);
+            const hotPosts = [...(posts || [])].filter(post => Number(post.is_hot));
+            const uniqueAgents = new Set((posts || []).map(post => post.agent_id));
+
+            document.getElementById('posts-count').textContent = String((posts || []).length);
+            document.getElementById('posts-hot-count').textContent = String(hotPosts.length);
+            document.getElementById('posts-agent-count').textContent = String(uniqueAgents.size);
+
+            document.getElementById('sort-posts-latest').classList.toggle('active', viewState.postsSort === 'latest');
+            document.getElementById('sort-posts-hot').classList.toggle('active', viewState.postsSort === 'hot');
+
+            if (!sorted.length) {
+                feed.innerHTML = '<div class="post-card">No forum posts yet.</div>';
+                trending.innerHTML = '<div class="mini-item"><div class="body">No hot posts yet.</div></div>';
+                newest.innerHTML = '<div class="mini-item"><div class="body">No recent posts yet.</div></div>';
+                return;
+            }
+
+            feed.innerHTML = sorted.slice(0, 40).map(post => `
+                <article class="post-card ${Number(post.is_hot) ? 'hot' : ''}">
+                    <div class="post-head">
+                        <div class="post-avatar">${escapeHtml(String(post.agent_id || '?').replace('Agent_', '').slice(0, 2))}</div>
+                        <div class="post-main">
+                            <div class="post-meta">
+                                <div class="post-author">${escapeHtml(post.agent_id)}</div>
+                                <div class="post-time">${formatTimestamp(post.timestamp)}</div>
+                            </div>
+                            <div class="post-tags">
+                                ${Number(post.is_hot) ? '<span class="post-tag hot">Hot Post</span>' : ''}
+                                ${post.parent_id !== null && post.parent_id !== undefined ? `<span class="post-tag reply">Reply to #${escapeHtml(post.parent_id)}</span>` : '<span class="post-tag">Original Post</span>'}
+                                ${sentimentTag(post.sentiment)}
+                            </div>
+                            <div class="post-content">${escapeHtml(post.content)}</div>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+
+            const hotSorted = [...(posts || [])]
+                .filter(post => Number(post.is_hot))
+                .sort((a, b) => Number(b.post_id) - Number(a.post_id));
+            trending.innerHTML = (hotSorted.length ? hotSorted.slice(0, 6) : sorted.slice(0, 6)).map(post => `
+                <div class="mini-item">
+                    <div class="meta">${escapeHtml(post.agent_id)} | ${formatTimestamp(post.timestamp)}</div>
+                    <div class="body">${escapeHtml(post.content)}</div>
+                </div>
+            `).join('');
+
+            const newestSorted = [...sorted].sort((a, b) => Number(b.post_id) - Number(a.post_id));
+            newest.innerHTML = newestSorted.slice(0, 6).map(post => `
+                <div class="mini-item">
+                    <div class="meta">${escapeHtml(post.agent_id)} | #${escapeHtml(post.post_id)}</div>
+                    <div class="body">${escapeHtml(post.content)}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderPageTab() {
+            const dashboard = document.getElementById('page-dashboard');
+            const posts = document.getElementById('page-posts');
+            const create = document.getElementById('page-create');
+            const dashboardBtn = document.getElementById('view-dashboard');
+            const postsBtn = document.getElementById('view-posts');
+            const createBtn = document.getElementById('view-create');
+            const showDashboard = viewState.pageTab === 'dashboard';
+            const showPosts = viewState.pageTab === 'posts';
+            dashboard.classList.toggle('active', showDashboard);
+            posts.classList.toggle('active', showPosts);
+            create.classList.toggle('active', viewState.pageTab === 'create');
+            dashboardBtn.classList.toggle('active', showDashboard);
+            postsBtn.classList.toggle('active', showPosts);
+            createBtn.classList.toggle('active', viewState.pageTab === 'create');
+        }
+
+        function renderCreateAgentPrices(prices) {
+            ['ITE', 'SLA', 'SMC', 'VDA'].forEach(symbol => {
+                const el = document.getElementById(`bundle-price-${symbol}`);
+                if (!el) return;
+                el.textContent = prices && prices[symbol] ? `| ${formatMoney(prices[symbol])}` : '';
+            });
+        }
+
+        async function submitCreateAgentForm(event) {
+            event.preventDefault();
+            const resultBox = document.getElementById('create-agent-result');
+            const holdings = {
+                ITE: Number(document.getElementById('bundle-ITE').value || 0),
+                SLA: Number(document.getElementById('bundle-SLA').value || 0),
+                SMC: Number(document.getElementById('bundle-SMC').value || 0),
+                VDA: Number(document.getElementById('bundle-VDA').value || 0),
+            };
+            const payload = {
+                display_name: document.getElementById('agent-display-name').value.trim(),
+                role_name: document.getElementById('agent-role-name').value.trim(),
+                starting_cash: Number(document.getElementById('agent-starting-cash').value || 0),
+                salary: Number(document.getElementById('agent-salary').value || 0),
+                cost_multiplier: Number(document.getElementById('agent-cost-multiplier').value || 1),
+                base_prompt: document.getElementById('agent-base-prompt').value.trim(),
+                holdings
+            };
+
+            try {
+                resultBox.textContent = 'Creating agent...';
+                const response = await fetch('/api/create-agent', {
+                    method: 'POST',
+                    headers: writeHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify(payload)
+                });
+                const data = await readJsonBody(response);
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                resultBox.innerHTML = `
+                    <strong>Created:</strong> ${escapeHtml(data.agent_id)}<br>
+                    Role: ${escapeHtml(data.role)}<br>
+                    Cash: ${formatMoney(data.cash)}<br>
+                    Stock Value: ${formatMoney(data.stock_value)}<br>
+                    Total Assets: ${formatMoney(data.total_assets)}<br>
+                    Holdings: ${Object.keys(data.holdings || {}).length ? Object.entries(data.holdings).map(([s, q]) => `${escapeHtml(s)}:${escapeHtml(q)}`).join(', ') : 'None'}
+                `;
+                await updateData();
+                viewState.selectedAgent = data.agent_id;
+                viewState.pageTab = 'dashboard';
+                renderPageTab();
+            } catch (err) {
+                resultBox.textContent = `Create failed: ${err.message}`;
+                showError(err.message);
+            }
+        }
+
+        async function submitBulletinForm(event) {
+            event.preventDefault();
+            const resultBox = document.getElementById('bulletin-result');
+            const payload = {
+                title: document.getElementById('bulletin-title').value.trim(),
+                content: document.getElementById('bulletin-content').value.trim(),
+                importance: Number(document.getElementById('bulletin-importance').value || 0.75)
+            };
+
+            try {
+                resultBox.textContent = 'Posting bulletin...';
+                const response = await fetch('/api/post-bulletin', {
+                    method: 'POST',
+                    headers: writeHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify(payload)
+                });
+                const data = await readJsonBody(response);
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                resultBox.innerHTML = `<strong>Posted:</strong> #${escapeHtml(data.bulletin_id)} ${escapeHtml(data.title)} | Importance ${Number(data.importance).toFixed(2)}`;
+                document.getElementById('bulletin-form').reset();
+                document.getElementById('bulletin-importance').value = '0.75';
+                await updateData();
+                showSuccess(`Bulletin #${data.bulletin_id} broadcast to all agents.`);
+            } catch (err) {
+                resultBox.textContent = `Bulletin failed: ${err.message}`;
+                showError(err.message);
+            }
+        }
+
+        async function runAgentAdminAction(agentId, action) {
+            const actionLabel = action === 'delete' ? 'delete' : 'disable';
+            const confirmed = window.confirm(
+                action === 'delete'
+                    ? `Delete ${agentId}? This removes the DB agent row and local JSON config.`
+                    : `Disable ${agentId}? This keeps history but removes the agent from future rounds.`
+            );
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(`/api/agent/${encodeURIComponent(agentId)}/${actionLabel}`, {
+                    method: 'POST',
+                    headers: writeHeaders({ 'Content-Type': 'application/json' })
+                });
+                const payload = await readJsonBody(response);
+                if (!response.ok || !payload.ok) {
+                    throw new Error(payload.error || `Failed to ${actionLabel} agent.`);
+                }
+                viewState.drawerAgentId = '';
+                viewState.drawerTab = 'overview';
+                renderAgentDrawer('');
+                await updateData();
+                showSuccess(
+                    actionLabel === 'delete'
+                        ? `${agentId} deleted from the active market roster.`
+                        : `${agentId} disabled and removed from future rounds.`
+                );
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function getSortedWealth(wealth) {
+            const { key, direction } = viewState.leaderboardSort;
+            const sorted = [...wealth];
+            sorted.sort((a, b) => {
+                const dir = direction === 'asc' ? 1 : -1;
+                if (key === 'id') {
+                    return a.id.localeCompare(b.id, undefined, { numeric: true }) * dir;
+                }
+                return (Number(a[key]) - Number(b[key])) * dir;
+            });
+            return sorted;
+        }
+
+        function renderSortIndicators() {
+            ['id', 'cash', 'stock_value', 'total_assets'].forEach(key => {
+                const el = document.getElementById(`sort-${key}`);
+                if (!el) return;
+                if (viewState.leaderboardSort.key === key) {
+                    el.textContent = viewState.leaderboardSort.direction === 'asc' ? '[ASC]' : '[DESC]';
+                } else {
+                    el.textContent = '';
+                }
+            });
+        }
+
+        function renderWealthTable(wealth) {
+            const wealthTbody = document.getElementById('wealth');
+            renderSortIndicators();
+            if (!wealth.length) {
+                wealthTbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No agent data.</td></tr>';
+                return;
+            }
+
+            wealthTbody.innerHTML = getSortedWealth(wealth).map(agent => {
+                const holdingsEntries = Object.entries(agent.holdings || {});
+                const holdingsStr = holdingsEntries.length
+                    ? holdingsEntries.map(([symbol, quantity]) => `${escapeHtml(symbol)}:${escapeHtml(quantity)}`).join(', ')
+                    : 'None';
+                return `
+                    <tr class="clickable-row" data-agent-id="${escapeHtml(agent.id)}">
+                        <td>${escapeHtml(agent.id)}</td>
+                        <td>${escapeHtml(agent.role)}</td>
+                        <td class="mono">${formatMoney(agent.cash)}</td>
+                        <td class="mono">${formatMoney(agent.stock_value)}</td>
+                        <td class="mono positive">${formatMoney(agent.total_assets)}</td>
+                        <td>${holdingsStr}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        
+
+        function renderTradeAssetLog(rows) {
+            const tbody = document.getElementById('trade-asset-log');
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">No trade asset logs yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = rows.slice().reverse().slice(0, 20).map(row => {
+                const delta = Number(row.total_assets_after) - Number(row.total_assets_before);
+                const deltaClass = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
+                return `
+                    <tr>
+                        <td>D${escapeHtml(row.day)} / T${escapeHtml(row.tick)}</td>
+                        <td>${escapeHtml(row.agent_id)}</td>
+                        <td>${escapeHtml(row.action)} ${escapeHtml(row.stock)} x${escapeHtml(row.executed_amount)}</td>
+                        <td class="mono">${formatMoney(row.price)}</td>
+                        <td class="mono">${formatMoney(row.cash_before)} -> ${formatMoney(row.cash_after)}</td>
+                        <td class="mono">${formatMoney(row.total_assets_before)} -> ${formatMoney(row.total_assets_after)}</td>
+                        <td class="mono ${deltaClass}">${delta >= 0 ? '+' : ''}${formatMoney(delta)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderBulletins(rows) {
+            const container = document.getElementById('bulletin-history');
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<div class="memory-item">No manual bulletins yet.</div>';
+                return;
+            }
+            container.innerHTML = rows.slice().reverse().slice(0, 8).map(item => `
+                <div class="memory-item">
+                    <div class="meta">#${escapeHtml(item.id)} | Day ${escapeHtml(item.day)} | Tick ${escapeHtml(item.tick)} | ${escapeHtml(item.phase)} | importance ${Number(item.importance || 0).toFixed(2)}</div>
+                    <div><strong>${escapeHtml(item.title)}</strong></div>
+                    <div>${escapeHtml(item.content)}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderAgentDrawer(agentId) {
+            const drawer = document.getElementById('agent-drawer');
+            if (!agentId || !latestData || !latestData.agent_details || !latestData.agent_details[agentId]) {
+                drawer.classList.remove('open');
+                return;
+            }
+
+            const detail = latestData.agent_details[agentId];
+            const profile = detail.profile || {};
+            const currentWealth = (latestData.wealth || []).find(agent => agent.id === agentId) || {};
+            const recentTrades = detail.recent_trades || [];
+            const tradingMemory = profile.trading_memory || [];
+            const socialMemory = profile.social_memory || [];
+            const policyMemory = profile.policy_memory || [];
+            const bulletinMemory = profile.bulletin_memory || [];
+            const fundamentalMemory = profile.fundamental_memory || [];
+            const episodicSummary = profile.episodic_summary || {};
+            const beliefs = profile.belief_memory || {};
+            const relationshipMemory = profile.relationship_memory || {};
+            const holdingsEntries = Object.entries(profile.holdings || {});
+            const assetHistory = detail.asset_history || [];
+            const isActive = profile.is_active !== false;
+            const activeTab = viewState.drawerTab || 'overview';
+
+            const tabClass = tab => activeTab === tab ? 'tab-btn active' : 'tab-btn';
+            const panelClass = tab => activeTab === tab ? 'tab-panel active' : 'tab-panel';
+
+            document.getElementById('drawer-title').textContent = `${agentId} Detail`;
+            document.getElementById('drawer-body').innerHTML = `
+                <div class="agent-action-row">
+                    <button class="agent-action-btn disable" type="button" data-agent-action="disable" data-agent-id="${escapeHtml(agentId)}">
+                        Disable Agent
+                    </button>
+                    <button class="agent-action-btn delete" type="button" data-agent-action="delete" data-agent-id="${escapeHtml(agentId)}">
+                        Delete Agent
+                    </button>
+                </div>
+                <div class="agent-action-note">
+                    Status: ${isActive ? 'Active' : 'Disabled'}.
+                    Disable keeps history but removes the agent from future rounds. Delete also removes the DB agent row and local JSON config.
+                </div>
+                <div class="tab-strip">
+                    <button class="${tabClass('overview')}" data-drawer-tab="overview">Overview</button>
+                    <button class="${tabClass('portfolio')}" data-drawer-tab="portfolio">Portfolio</button>
+                    <button class="${tabClass('trades')}" data-drawer-tab="trades">Trades</button>
+                    <button class="${tabClass('social')}" data-drawer-tab="social">Social</button>
+                    <button class="${tabClass('beliefs')}" data-drawer-tab="beliefs">Beliefs</button>
+                </div>
+
+                <div class="${panelClass('overview')}">
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="label">Role</div>
+                            <div class="value">${escapeHtml(profile.role || 'Unknown')}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Status</div>
+                            <div class="value">${isActive ? 'Active' : 'Disabled'}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Total Assets</div>
+                            <div class="value">${formatMoney(currentWealth.total_assets || 0)}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Cash</div>
+                            <div class="value">${formatMoney(currentWealth.cash || 0)}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Stock Value</div>
+                            <div class="value">${formatMoney(currentWealth.stock_value || 0)}</div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Latest Trading Memory</h3>
+                        <div class="memory-list">
+                            ${tradingMemory.length ? tradingMemory.slice(-3).reverse().map(item => `
+                                <div class="memory-item">
+                                    <div class="meta">Tick ${escapeHtml(item.tick)} | ${escapeHtml(item.action?.toUpperCase?.() || 'TRADE')} ${escapeHtml(item.stock || '')}</div>
+                                    <div>Exec ${escapeHtml(item.exec ?? '-')} at ${item.price ? formatMoney(item.price) : '-'}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No trading memory yet.</div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="${panelClass('portfolio')}">
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="label">Cash</div>
+                            <div class="value">${formatMoney(currentWealth.cash || 0)}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Stock Value</div>
+                            <div class="value">${formatMoney(currentWealth.stock_value || 0)}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Total Assets</div>
+                            <div class="value">${formatMoney(currentWealth.total_assets || 0)}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="label">Snapshots</div>
+                            <div class="value">${assetHistory.length}</div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Holdings</h3>
+                        <div class="memory-list">
+                            ${holdingsEntries.length ? holdingsEntries.map(([symbol, quantity]) => `
+                                <div class="memory-item">
+                                    <div class="meta">${escapeHtml(symbol)}</div>
+                                    <div>${escapeHtml(quantity)} shares</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No holdings.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Asset History</h3>
+                        <div class="memory-list">
+                            ${assetHistory.length ? assetHistory.slice(-6).reverse().map(point => `
+                                <div class="memory-item">
+                                    <div class="meta">Day ${escapeHtml(point.day)} | Tick ${escapeHtml(point.tick)} | ${escapeHtml(point.phase)}</div>
+                                    <div>Cash ${formatMoney(point.cash)} | Assets ${formatMoney(point.total_assets)}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No asset history yet.</div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="${panelClass('trades')}">
+                    <div class="detail-section">
+                        <h3>Recent Trades</h3>
+                        <div class="memory-list">
+                            ${recentTrades.length ? recentTrades.slice(-8).reverse().map(trade => `
+                                <div class="memory-item">
+                                    <div class="meta">Tick ${escapeHtml(trade.tick)} | ${escapeHtml(trade.action)} ${escapeHtml(trade.stock)}</div>
+                                    <div>${trade.executed_amount} @ ${formatMoney(trade.price)} | Cash ${formatMoney(trade.cash_before)} -> ${formatMoney(trade.cash_after)}</div>
+                                    <div>Assets ${formatMoney(trade.total_assets_before)} -> ${formatMoney(trade.total_assets_after)}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No recent trades.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Trading Memory</h3>
+                        <div class="memory-list">
+                            ${tradingMemory.length ? tradingMemory.slice(-8).reverse().map(item => `
+                                <div class="memory-item">
+                                    <div class="meta">Tick ${escapeHtml(item.tick)} | ${escapeHtml(item.action?.toUpperCase?.() || 'TRADE')} ${escapeHtml(item.stock || '')}</div>
+                                    <div>Exec ${escapeHtml(item.exec ?? '-')} at ${item.price ? formatMoney(item.price) : '-'}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No trading memory yet.</div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="${panelClass('social')}">
+                    <div class="detail-section">
+                        <h3>Social Memory</h3>
+                        <div class="memory-list">
+                            ${socialMemory.length ? socialMemory.slice(-8).reverse().map(item => `
+                                <div class="memory-item">
+                                    <div class="meta">Tick ${escapeHtml(item.tick)} | ${escapeHtml(item.decision || 'hold')}</div>
+                                    <div>${escapeHtml(item.thought || item.feed_summary || 'No detail')}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No social memory yet.</div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="${panelClass('beliefs')}">
+                    <div class="detail-section">
+                        <h3>Bulletin Memory</h3>
+                        <div class="memory-list">
+                            ${bulletinMemory.length ? bulletinMemory.slice(-8).reverse().map(item => `
+                                <div class="memory-item">
+                                    <div class="meta">#${escapeHtml(item.bulletin_id || item.id || '?')} | importance ${Number(item.importance || 0).toFixed(2)}</div>
+                                    <div><strong>${escapeHtml(item.title || 'Untitled Bulletin')}</strong></div>
+                                    <div>${escapeHtml(item.summary || item.content || 'No summary')}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No bulletin memory yet.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Policy Memory</h3>
+                        <div class="memory-list">
+                            ${policyMemory.length ? policyMemory.slice(-6).reverse().map(item => `
+                                <div class="memory-item">
+                                    <div class="meta">
+                                        Day ${escapeHtml(item.day)} | Tick ${escapeHtml(item.tick)}
+                                        <span class="policy-type ${escapeHtml(item.policy_type || 'neutral')}" style="margin-left:8px;padding:4px 8px;font-size:0.7rem;">
+                                            ${escapeHtml(item.policy_type || 'neutral')}
+                                        </span>
+                                    </div>
+                                    <div>${escapeHtml(item.summary || 'No summary')}</div>
+                                    <div>
+                                        ${item.personal_impact?.taxed
+                                            ? `Personal Impact: taxed ${formatMoney(item.personal_impact.actual_tax || 0)} (due ${formatMoney(item.personal_impact.tax_due || 0)})`
+                                            : 'Personal Impact: no direct tax applied'}
+                                    </div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No policy memory yet.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Fundamental Event Memory</h3>
+                        <div class="memory-list">
+                            ${fundamentalMemory.length ? fundamentalMemory.slice(-8).reverse().map(item => `
+                                <div class="memory-item">
+                                    <div class="meta">${escapeHtml(item.symbol || '?')} | ${escapeHtml(item.event_type || 'event')} | trust ${Number(item.trust || 0).toFixed(2)} | importance ${Number(item.importance || 0).toFixed(2)}</div>
+                                    <div><strong>${escapeHtml(item.title || 'Untitled Event')}</strong></div>
+                                    <div>${escapeHtml(item.summary || 'No summary')}</div>
+                                    <div>Stance: ${escapeHtml(item.stance || 'neutral')} | Bias: ${escapeHtml(item.reaction_bias || 'balanced')} | Interpreted impact ${Number(item.interpreted_impact || 0).toFixed(2)}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No fundamental event memory yet.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Episodic Summary</h3>
+                        <div class="memory-list">
+                            ${Object.keys(episodicSummary).length ? Object.entries(episodicSummary).map(([key, value]) => `
+                                <div class="memory-item">
+                                    <div class="meta">${escapeHtml(key)}</div>
+                                    <div>${escapeHtml(value)}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No episodic summary yet.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Belief Memory</h3>
+                        <div class="memory-list">
+                            ${Object.keys(beliefs).length ? Object.entries(beliefs).map(([key, value]) => `
+                                <div class="memory-item">
+                                    <div class="meta">${escapeHtml(key)}</div>
+                                    <div>${escapeHtml(value)}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No belief memory yet.</div>'}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Relationship Memory</h3>
+                        <div class="memory-list">
+                            ${Object.keys(relationshipMemory).length ? Object.entries(relationshipMemory).map(([key, value]) => `
+                                <div class="memory-item">
+                                    <div class="meta">${escapeHtml(key)}</div>
+                                    <div>${escapeHtml(value)}</div>
+                                </div>
+                            `).join('') : '<div class="memory-item">No relationship memory yet.</div>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            drawer.classList.add('open');
+        }
+
+        function syncSelectOptions(selectEl, values, currentValue) {
+            const validValues = values || [];
+            if (!validValues.length) {
+                selectEl.innerHTML = '';
+                return '';
+            }
+            selectEl.innerHTML = validValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+            const nextValue = validValues.includes(currentValue) ? currentValue : validValues[0];
+            selectEl.value = nextValue;
+            return nextValue;
+        }
+
+        function drawAxes(ctx, width, height, leftPad, topPad, rightPad, bottomPad) {
+            ctx.strokeStyle = 'rgba(142, 162, 191, 0.35)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(leftPad, topPad);
+            ctx.lineTo(leftPad, height - bottomPad);
+            ctx.lineTo(width - rightPad, height - bottomPad);
+            ctx.stroke();
+        }
+
+        function clearChart(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#07111f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            return ctx;
+        }
+
+        function drawLineChart(canvas, points) {
+            const ctx = clearChart(canvas);
+            const width = canvas.width;
+            const height = canvas.height;
+            const leftPad = 56;
+            const topPad = 24;
+            const rightPad = 18;
+            const bottomPad = 34;
+            drawAxes(ctx, width, height, leftPad, topPad, rightPad, bottomPad);
+
+            if (!points.length) {
+                ctx.fillStyle = '#8ea2bf';
+                ctx.fillText('No asset history yet.', 20, 32);
+                return;
+            }
+
+            const totals = points.map(point => Number(point.total_assets));
+            const cashes = points.map(point => Number(point.cash));
+            const values = totals.concat(cashes);
+            const minValue = Math.min(...values) * 0.98;
+            const maxValue = Math.max(...values) * 1.02;
+            const usableWidth = width - leftPad - rightPad;
+            const usableHeight = height - topPad - bottomPad;
+            const projectX = index => leftPad + (usableWidth * index) / Math.max(points.length - 1, 1);
+            const projectY = value => topPad + usableHeight - ((value - minValue) / Math.max(maxValue - minValue, 1)) * usableHeight;
+
+            ctx.strokeStyle = '#3dd5f3';
+            ctx.lineWidth = 2.6;
+            ctx.beginPath();
+            totals.forEach((value, index) => {
+                const x = projectX(index);
+                const y = projectY(value);
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            ctx.strokeStyle = '#5eead4';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            cashes.forEach((value, index) => {
+                const x = projectX(index);
+                const y = projectY(value);
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            ctx.fillStyle = '#8ea2bf';
+            ctx.fillText(formatMoney(minValue), 6, height - bottomPad + 4);
+            ctx.fillText(formatMoney(maxValue), 6, topPad + 4);
+        }
+
+        function drawCandlestickChart(canvas, bars) {
+            const ctx = clearChart(canvas);
+            const width = canvas.width;
+            const height = canvas.height;
+            const leftPad = 56;
+            const topPad = 24;
+            const rightPad = 18;
+            const bottomPad = 34;
+            drawAxes(ctx, width, height, leftPad, topPad, rightPad, bottomPad);
+
+            if (!bars.length) {
+                ctx.fillStyle = '#8ea2bf';
+                ctx.fillText('No candle data yet.', 20, 32);
+                candleHoverState = null;
+                return;
+            }
+
+            const highs = bars.map(bar => Number(bar.high));
+            const lows = bars.map(bar => Number(bar.low));
+            const minValue = Math.min(...lows) * 0.98;
+            const maxValue = Math.max(...highs) * 1.02;
+            const usableWidth = width - leftPad - rightPad;
+            const usableHeight = height - topPad - bottomPad;
+            const step = usableWidth / Math.max(bars.length, 1);
+            const bodyWidth = Math.max(4, step * 0.55);
+            const projectY = value => topPad + usableHeight - ((value - minValue) / Math.max(maxValue - minValue, 1)) * usableHeight;
+
+            const hoverBars = [];
+            bars.forEach((bar, index) => {
+                const centerX = leftPad + step * index + step / 2;
+                const openY = projectY(Number(bar.open));
+                const closeY = projectY(Number(bar.close));
+                const highY = projectY(Number(bar.high));
+                const lowY = projectY(Number(bar.low));
+                const up = Number(bar.close) >= Number(bar.open);
+                const color = up ? '#22c55e' : '#ef4444';
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(centerX, highY);
+                ctx.lineTo(centerX, lowY);
+                ctx.stroke();
+
+                ctx.fillStyle = color;
+                const rectY = Math.min(openY, closeY);
+                const rectH = Math.max(2, Math.abs(closeY - openY));
+                ctx.fillRect(centerX - bodyWidth / 2, rectY, bodyWidth, rectH);
+
+                hoverBars.push({
+                    index,
+                    centerX,
+                    leftX: centerX - Math.max(bodyWidth / 2, step / 2),
+                    rightX: centerX + Math.max(bodyWidth / 2, step / 2),
+                    topY: highY,
+                    bottomY: lowY,
+                    bar
+                });
+            });
+
+            ctx.fillStyle = '#8ea2bf';
+            ctx.fillText(formatMoney(minValue), 6, height - bottomPad + 4);
+            ctx.fillText(formatMoney(maxValue), 6, topPad + 4);
+            candleHoverState = {
+                bars: hoverBars,
+                bounds: { leftPad, rightPad, topPad, bottomPad, width, height }
+            };
+        }
+
+        function hideCandleTooltip() {
+            const tooltip = document.getElementById('candle-tooltip');
+            tooltip.classList.remove('visible');
+        }
+
+        function showCandleTooltip(event) {
+            if (!candleHoverState || !candleHoverState.bars.length) {
+                hideCandleTooltip();
+                return;
+            }
+
+            const canvas = document.getElementById('candle-chart');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+
+            const hovered = candleHoverState.bars.find(item =>
+                x >= item.leftX && x <= item.rightX && y >= candleHoverState.bounds.topPad && y <= candleHoverState.bounds.height - candleHoverState.bounds.bottomPad
+            );
+
+            if (!hovered) {
+                hideCandleTooltip();
+                return;
+            }
+
+            const tooltip = document.getElementById('candle-tooltip');
+            const { bar } = hovered;
+            tooltip.innerHTML = `
+                <div class="title">${escapeHtml(viewState.selectedStock)} ${escapeHtml(bar.label)}</div>
+                <div class="row"><span class="label">Open</span><span>${formatMoney(bar.open)}</span></div>
+                <div class="row"><span class="label">High</span><span>${formatMoney(bar.high)}</span></div>
+                <div class="row"><span class="label">Low</span><span>${formatMoney(bar.low)}</span></div>
+                <div class="row"><span class="label">Close</span><span>${formatMoney(bar.close)}</span></div>
+                <div class="row"><span class="label">Volume</span><span>${Number(bar.volume).toLocaleString()}</span></div>
+                <div class="row"><span class="label">Time</span><span>${bar.label}</span></div>
+            `;
+
+            const wrap = canvas.parentElement;
+            const wrapRect = wrap.getBoundingClientRect();
+            const tooltipWidth = 240;
+            const tooltipHeight = 168;
+            let left = event.clientX - wrapRect.left + 14;
+            let top = event.clientY - wrapRect.top - tooltipHeight - 10;
+
+            if (left + tooltipWidth > wrapRect.width - 12) {
+                left = wrapRect.width - tooltipWidth - 12;
+            }
+            if (left < 12) {
+                left = 12;
+            }
+            if (top < 12) {
+                top = event.clientY - wrapRect.top + 16;
+            }
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+            tooltip.classList.add('visible');
+        }
+
+        function renderCharts(data) {
+            const assetPoints = (data.asset_history && data.asset_history[viewState.selectedAgent]) || [];
+            const assetLast = assetPoints.length ? assetPoints[assetPoints.length - 1] : null;
+            document.getElementById('asset-chart-title').textContent = `${viewState.selectedAgent || 'Agent'} Asset History`;
+            document.getElementById('asset-chart-meta').textContent = assetLast
+                ? `Last: ${assetLast.source} | ${formatMoney(assetLast.total_assets)}`
+                : '';
+            drawLineChart(document.getElementById('asset-history-chart'), assetPoints);
+
+            const candleSet = viewState.candleMode === 'daily'
+                ? ((data.daily_candles && data.daily_candles[viewState.selectedStock]) || [])
+                : ((data.intraday_candles && data.intraday_candles[viewState.selectedStock]) || []);
+            const candleLast = candleSet.length ? candleSet[candleSet.length - 1] : null;
+            document.getElementById('candle-chart-title').textContent = `${viewState.selectedStock || 'Stock'} ${viewState.candleMode === 'daily' ? 'Daily' : 'Intraday'} K-Line`;
+            document.getElementById('candle-chart-meta').textContent = candleLast
+                ? `Last Close: ${formatMoney(candleLast.close)} | Vol: ${Number(candleLast.volume).toLocaleString()}`
+                : '';
+            drawCandlestickChart(document.getElementById('candle-chart'), candleSet);
+        }
+
+        function syncControls(data) {
+            const agentSelect = document.getElementById('agent-select');
+            const stockSelect = document.getElementById('stock-select');
+            const agentIds = data.agent_ids || [];
+            const stockIds = Object.keys(data.prices || {});
+
+            viewState.selectedAgent = syncSelectOptions(agentSelect, agentIds, viewState.selectedAgent);
+            viewState.selectedStock = syncSelectOptions(stockSelect, stockIds, viewState.selectedStock);
+            document.getElementById('candle-mode').value = viewState.candleMode;
+        }
+
+        function bindInteractiveControls() {
+            document.getElementById('view-dashboard').addEventListener('click', () => {
+                viewState.pageTab = 'dashboard';
+                renderPageTab();
+            });
+            document.getElementById('view-posts').addEventListener('click', () => {
+                viewState.pageTab = 'posts';
+                renderPageTab();
+                if (latestData) renderPostsPage(latestData.forum_posts || []);
+            });
+            document.getElementById('view-create').addEventListener('click', () => {
+                viewState.pageTab = 'create';
+                renderPageTab();
+            });
+            document.getElementById('agent-select').addEventListener('change', (event) => {
+                viewState.selectedAgent = event.target.value;
+                if (latestData) renderCharts(latestData);
+            });
+            document.getElementById('stock-select').addEventListener('change', (event) => {
+                viewState.selectedStock = event.target.value;
+                if (latestData) renderCharts(latestData);
+            });
+            document.getElementById('candle-mode').addEventListener('change', (event) => {
+                viewState.candleMode = event.target.value;
+                if (latestData) renderCharts(latestData);
+            });
+            document.querySelectorAll('[data-sort-key]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const key = button.dataset.sortKey;
+                    if (viewState.leaderboardSort.key === key) {
+                        viewState.leaderboardSort.direction = viewState.leaderboardSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        viewState.leaderboardSort.key = key;
+                        viewState.leaderboardSort.direction = key === 'id' ? 'asc' : 'desc';
+                    }
+                    if (latestData) renderWealthTable(latestData.wealth || []);
+                });
+            });
+            document.getElementById('wealth').addEventListener('click', event => {
+                const row = event.target.closest('tr[data-agent-id]');
+                if (!row) return;
+                viewState.drawerAgentId = row.dataset.agentId;
+                viewState.drawerTab = 'overview';
+                renderAgentDrawer(viewState.drawerAgentId);
+            });
+            document.getElementById('drawer-close').addEventListener('click', () => {
+                viewState.drawerAgentId = '';
+                viewState.drawerTab = 'overview';
+                renderAgentDrawer('');
+            });
+            document.getElementById('drawer-body').addEventListener('click', event => {
+                const actionButton = event.target.closest('[data-agent-action]');
+                if (actionButton) {
+                    runAgentAdminAction(actionButton.dataset.agentId, actionButton.dataset.agentAction);
+                    return;
+                }
+                const tabButton = event.target.closest('[data-drawer-tab]');
+                if (!tabButton) return;
+                viewState.drawerTab = tabButton.dataset.drawerTab;
+                if (viewState.drawerAgentId) renderAgentDrawer(viewState.drawerAgentId);
+            });
+            document.getElementById('sort-posts-latest').addEventListener('click', () => {
+                viewState.postsSort = 'latest';
+                if (latestData) renderPostsPage(latestData.forum_posts || []);
+            });
+            document.getElementById('sort-posts-hot').addEventListener('click', () => {
+                viewState.postsSort = 'hot';
+                if (latestData) renderPostsPage(latestData.forum_posts || []);
+            });
+            document.getElementById('agent-prompt-preset').addEventListener('change', event => {
+                if (event.target.value) {
+                    document.getElementById('agent-base-prompt').value = event.target.value;
+                }
+            });
+            document.getElementById('create-agent-form').addEventListener('submit', submitCreateAgentForm);
+            document.getElementById('bulletin-form').addEventListener('submit', submitBulletinForm);
+            const candleCanvas = document.getElementById('candle-chart');
+            candleCanvas.addEventListener('mousemove', showCandleTooltip);
+            candleCanvas.addEventListener('mouseleave', hideCandleTooltip);
+        }
+
+        let updateInFlight = false;
+
+        async function updateData() {
+            if (updateInFlight) return;
+            updateInFlight = true;
+            try {
+                const response = await fetch('/api/data');
+                if (!response.ok) {
+                    const errData = await readJsonBody(response);
+                    throw new Error(errData.error || `HTTP ${response.status}`);
+                }
+
+                const payload = await readJsonBody(response);
+                if (!payload || !Object.keys(payload).length) {
+                    throw new Error('Empty response from dashboard API');
+                }
+                latestData = payload;
+                syncControls(latestData);
+                renderStatus(latestData.simulation_status || {});
+                renderSummary(latestData.wealth || []);
+                renderPrices(latestData.stock_catalog || {});
+                renderMarketStats(latestData.market_round_stats || []);
+                renderErrors(latestData.stderr_tail || []);
+                renderHealthReport(latestData.health_report || {});
+                renderPolicyHistory(latestData.policy_history || []);
+                renderFundamentalEvents(latestData.fundamental_events || []);
+                renderBulletins(latestData.bulletins || []);
+                renderDailyAudits(latestData.daily_audits || []);
+                renderWealthTable(latestData.wealth || []);
+                renderTradeAssetLog(latestData.trade_asset_log || []);
+                renderCharts(latestData);
+                renderPostsPage(latestData.forum_posts || []);
+                renderCreateAgentPrices(latestData.prices || {});
+                if (viewState.drawerAgentId) {
+                    renderAgentDrawer(viewState.drawerAgentId);
+                }
+                document.getElementById('submitted-orders').innerHTML = (latestData.submitted_orders || []).length
+                    ? latestData.submitted_orders.map(escapeHtml).join('<br>')
+                    : 'No submitted orders captured for the latest market round yet.';
+                document.getElementById('matched-trades').innerHTML = (latestData.matched_trades || []).length
+                    ? latestData.matched_trades.map(escapeHtml).join('<br>')
+                    : 'No matched trades recorded for the latest settled tick yet.';
+            } catch (e) {
+                console.error('Fetch error:', e);
+                showError(e.message);
+            } finally {
+                updateInFlight = false;
+            }
+        }
+
+        bindInteractiveControls();
+        renderPageTab();
+        setInterval(updateData, 30000);
+        updateData();
+    </script>
+</body>
+</html>
+

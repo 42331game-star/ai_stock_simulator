@@ -1,0 +1,3 @@
+# This folder holds one JSON config per agent.
+# It ships empty on purpose: create your own agents from the dashboard
+# (Create Agent view) or drop a JSON file here — see README.md.

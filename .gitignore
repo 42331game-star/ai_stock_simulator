@@ -1,0 +1,31 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Runtime data (generated while the simulator runs) ---
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+simulation_status.json
+trade_log.md
+forum_log.md
+daily_audit_log.md
+
+# --- Scratch / temp files ---
+_tmp_*
+
+# --- Secrets: never commit API keys ---
+.env
+.env.*
+!.env.example
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

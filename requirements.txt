@@ -1,0 +1,6 @@
+# Web dashboard
+flask>=3.0
+
+# LLM provider used by llm_router.py (Google Gemini)
+# Xiaomi MiMo is called through plain urllib and needs no extra package.
+google-generativeai>=0.8.0
